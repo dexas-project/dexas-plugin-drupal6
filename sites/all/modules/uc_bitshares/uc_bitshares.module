@@ -1,0 +1,222 @@
+<?php
+/**
+ * The MIT License (MIT)
+ * 
+ * Copyright (c) 2011-2015 bitshares
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+
+define ('BITSHARES_SMALL_LOGO_FILE', base_path() . drupal_get_path('module', 'uc_bitshares') . "/bitshares-logo.png");
+
+/**
+ * Settings form for the bitshares payment method module.
+ * Not directly hooked into by Ubercart; called by
+ * uc_payment_method_bitshares()
+ *
+ * @return array
+ */
+function uc_bitshares_settings_form()
+{
+	global $base_url;
+	
+	$form = array();
+
+	$form['admin'] = array(
+		'#type'        => 'fieldset',
+		'#title'       => t('Administrator settings'),
+		'#collapsible' => TRUE,
+		'#collapsed'   => TRUE,
+	);
+	
+	$form['admin']['uc_bitshares_base_url'] = array(
+		'#type'          => 'textfield',
+		'#title'         => t('Store website base URL'),
+		'#default_value' => variable_get('uc_bitshares_base_url', $base_url),
+		'#description'   =>
+			t("Base URL of the store website. It is presented here primarily as an option to force the use of the 'https' version of your website if it doesn't automatically use it. bitshares ") . '<b>' . t('must') . '</b>' . t(" use 'https', so please add the 's' if needed. For reference, the store's internal base URL is normally: ") . '<b>' . $base_url . '</b>',
+	);
+	$form['admin']['uc_bitshares_debug_mode'] = array(
+		'#type'          => 'radios',
+		'#title'         => t('Debug mode activation'),
+		'#default_value' => variable_get('uc_bitshares_debug_mode', 0),
+		'#options'       => array(
+			0 => t('Allow anyone to pay with Bitshares.'),
+			1 => t('Only allow administrators to pay with Bitshares.')
+		),
+		'#description' => t('This allows restricting Bitshares payments to only store administrators, primarily for testing and/or debugging purposes.'),
+	);
+
+
+	return $form;
+}
+
+
+
+/**
+ * Display help and module information
+ *
+ * @param path which path of the site we're displaying help
+ * @param arg array that holds the current path as would be returned from arg() function
+ *
+ * @return help text for the path
+ */
+function uc_bitshares_help($path, $arg) {
+	$o = '';  // declare your output variable
+    switch ($path)
+    {
+		case "admin/help#bitshares":
+			$o .= '<p>' . t('Implements the acceptance of Bitshares payments') . '</p>';
+			break;
+	}
+	return $o;
+} // end function - uc_bitshares_help
+
+
+/**
+ * Implements hook_payment_method().
+ *
+ * @return array
+ */
+function uc_bitshares_payment_method()
+{
+	// only show it if we aren't in debug mode, or are an admin
+	if ((!variable_get('uc_bitshares_debug_mode', 0) ||
+        user_access('access administration menu')))
+    {
+        $title = '<img src="' . BITSHARES_SMALL_LOGO_FILE . '" ' .
+            'style="position:relative; top:5px; margin-right:6px;" />' .
+            t('Pay with Bitshares.');
+
+		$methods[] = array(
+			'id'         => 'Bitshares',
+			'name'       => t('Bitshares'),
+			'title'      => $title,
+			'review'     => t('Bitshares'),
+			'desc'       => t('Make a payment using Bitshares.'),
+			'callback'   => 'uc_payment_method_bitshares',
+			'weight'     => 4,
+			'checkout'   => FALSE,
+			'no_gateway' => TRUE,
+		);
+
+		return $methods;
+	}
+    else
+    {
+		return array();
+	}
+}
+
+
+/**
+ * Implementation of hook_order().
+ *
+ * @param $op
+ * @param $arg1
+ * @param $arg2
+ *
+ * @return array|true
+ */
+function uc_bitshares_order($op, $arg1, $arg2)
+{
+	
+} // end function - uc_bitshares_order
+
+
+/**
+ * Payment method callback for the bitshares payment method
+ *
+ * @param $op
+ * @param $order
+ *
+ * @return
+ */
+function uc_payment_method_bitshares($op, &$order)
+{
+    switch ($op)
+    {
+		case 'settings':
+			return uc_bitshares_settings_form();
+            break;
+		case 'cart-details':
+			return t('After checkout, you will be redirected to Bitshares Checkout to complete payment.');
+            break;
+		
+	}
+} // end function - uc_payment_method_bitshares
+
+
+
+
+/**
+ * Alter Ubercart's payment methods settings form to validate Bitshares settings
+ *
+ * @param $form
+ * @param $form_state
+ * @param $form_id
+ */
+function uc_bitshares_form_alter(&$form, $form_state, $form_id)
+{
+	global $base_url;
+	
+    switch ($form_id)
+    {
+    case 'uc_cart_checkout_review_form':
+    {
+	  $order = uc_order_load($_SESSION['cart_order']);
+	  
+	  $form['#redirect'] = $base_url.'/bitshares/redirect2bitshares.php?order_id='.$order->order_id.'&total='.number_format($order->order_total, 2, '.', '').'&code='.$order->currency ;
+		    
+	  break;
+    }
+    case 'uc_payment_methods_form':
+        if (variable_get('uc_payment_method_bitshares_checkout', FALSE) || $form_state['values']['uc_payment_method_bitshares_checkout'])
+        {
+            $form['#validate'][] = 'uc_bitshares_settings_validate';
+        }
+        
+        break;
+    }
+}
+
+/**
+ * Validate bitshares payment method settings.
+ *
+ * @param       $form
+ * @param array $form_state
+ */
+function uc_bitshares_settings_validate($form, &$form_state)
+{
+	
+	$err   = false;
+	global $base_url;
+	
+	// the store website base url shouldn't be blank
+	$c = $form_state['values']['uc_bitshares_base_url'];
+    if ($c == '')
+    {
+		$err = true;
+		form_set_error('uc_bitshares_base_url', t('The website base URL should not be blank; please use the recommended URL rather than none.'));
+	}
+	
+		
+} // end function - uc_bitshares_settings_validate
+

@@ -1,0 +1,7 @@
+name = "Bitshares"
+description = "Enables receipt of Bitshares payments."
+dependencies[] = uc_payment
+package = Ubercart - payment
+core = 6.x
+version = "6.x-1.0"
+	

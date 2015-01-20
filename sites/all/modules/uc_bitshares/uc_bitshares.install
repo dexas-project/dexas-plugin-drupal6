@@ -1,0 +1,87 @@
+<?php
+/**
+ * The MIT License (MIT)
+ * 
+ * Copyright (c) 2011-2015 bitshares
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/**
+ * @file
+ *   uc_bitshares.install
+ *
+ * Installation file for the bitshares payment module for Ubercart
+ */
+
+
+/**
+ * Implementation of hook_requirements().
+ *
+ * @param $phase
+ *
+ * @return array
+ */
+function uc_bitshares_requirements($phase)
+{
+    $t            = get_t();
+    $requirements = array();
+    // bitshares's provided API code requires cURL.
+    $has_curl = function_exists('curl_init');
+    if (variable_get('uc_payment_method_bitshares_checkout', FALSE))
+    {
+        $requirements['uc_bitshares_curl'] = array(
+            'title' => $t('cURL'),
+            'value' => $has_curl ? $t('Enabled') : $t('Not found'),
+        );
+        if (!$has_curl)
+        {
+            $requirements['uc_bitshares_curl']['severity']    = REQUIREMENT_ERROR;
+            $requirements['uc_bitshares_curl']['description'] = $t("bitshares requires the PHP <a href = '!curl_url'>cURL</a> library.", array('!curl_url' => 'http://php.net/manual/en/curl.setup.php'));
+        }
+    }
+
+    return $requirements;
+}
+
+/**
+ * Implementation of hook_install().
+ *
+ * Installs the bitshares module; particularly, installs the database
+ * schema and alters orders statuses to include 'bitshares pending'.
+ */
+function uc_bitshares_install()
+{
+    // Set the module weight so it can override other modules.
+    db_query("UPDATE {system} SET weight = 99 WHERE name = 'bitshares'");
+
+    
+}
+
+/**
+ * Implementation of hook_uninstall()
+ *
+ * Uninstalls the bitshares module.
+ */
+function uc_bitshares_uninstall()
+{
+
+    // Remove relevant data from the DB
+    db_query("DELETE FROM {variable} WHERE name LIKE 'uc_bitshares_%%'");
+}
