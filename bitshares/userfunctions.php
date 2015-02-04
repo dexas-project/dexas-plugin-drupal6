@@ -109,8 +109,6 @@ function getOrderWithStatusFromCartHelper($id, $response_code)
 
 function sendToCart($order_id, $statusCode, $total)
 {
-  global $baseURL;
-
   $response = array();
   $order = uc_order_load($order_id);
 
@@ -124,7 +122,7 @@ function sendToCart($order_id, $statusCode, $total)
         // note the payment confirmation
         uc_order_comment_save($order_id, 0, t("Customer's bitshares payment has confirmed."), 'admin', 'completed');
 
-         $response['url'] =  $baseURL.'user/'.$order->uid.'/orders';
+         $response['url'] =  baseURL.'user/'.$order->uid.'/orders';
          uc_cart_empty($order->uid);
 	  }
     else if($statusCode === 'C')
@@ -132,7 +130,7 @@ function sendToCart($order_id, $statusCode, $total)
         uc_order_update_status($order_id, 'canceled');
         uc_order_comment_save($order_id, 0, t("Customer cancelled this order from the checkout form."), 'admin', 'canceled');
         
-        $response['url'] =  $baseURL . 'cart/checkout';
+        $response['url'] =  baseURL . 'cart/checkout';
 
     }
   }
@@ -164,15 +162,13 @@ function getOpenOrdersUser()
 }
 function isOrderCompleteUser($memo, $order_id)
 {
-	global $accountName;
-	global $hashSalt;
   // find orders with id order_id and status id (completed)
 	$result = getOrderWithStatusFromCartHelper($order_id, 'P');
 	foreach ($result as $responseOrder) {
 			$total = $responseOrder['order_total'];
 			$total = number_format((float)$total,2);
 			$asset = btsCurrencyToAsset($responseOrder['currency']);
-			$hash =  btsCreateEHASH($accountName,$order_id, $total, $asset, $hashSalt);
+			$hash =  btsCreateEHASH(accountName,$order_id, $total, $asset, hashSalt);
 			$memoSanity = btsCreateMemo($hash);		
 			if($memoSanity === $memo)
 			{	
@@ -183,8 +179,6 @@ function isOrderCompleteUser($memo, $order_id)
 }
 function doesOrderExistUser($memo, $order_id)
 {
-	global $accountName;
-	global $hashSalt;
   // find orders with id order_id and status id (not paid)
 	$result = getOrderWithStatusFromCartHelper($order_id, 'Q');
 
@@ -192,7 +186,7 @@ function doesOrderExistUser($memo, $order_id)
 			$total = $responseOrder['order_total'];
 			$total = number_format((float)$total,2);
 			$asset = btsCurrencyToAsset($responseOrder['currency']);
-      $hash =  btsCreateEHASH($accountName,$order_id, $total, $asset, $hashSalt);
+      $hash =  btsCreateEHASH(accountName,$order_id, $total, $asset, hashSalt);
       $memoSanity = btsCreateMemo($hash);
 			if($memoSanity === $memo)
 			{	
@@ -209,15 +203,12 @@ function doesOrderExistUser($memo, $order_id)
 
 function completeOrderUser($order)
 {
-	global $baseURL;
-    $response = sendToCart($order['order_id'], 'P', $order['total']);  
+  $response = sendToCart($order['order_id'], 'P', $order['total']);  
 	return $response;
 }
 function cancelOrderUser($order)
 {
-	global $baseURL;
-    $response = sendToCart($order['order_id'], 'C', $order['total']);  
-
+  $response = sendToCart($order['order_id'], 'C', $order['total']);  
 	return $response;
 }
 function cronJobUser()
@@ -226,19 +217,15 @@ function cronJobUser()
 }
 function createOrderUser()
 {
-
-	global $accountName;
-	global $hashSalt;
-
 	$order_id    = $_REQUEST['order_id'];
 	$asset = btsCurrencyToAsset($_REQUEST['code']);
 	$total = number_format((float)$_REQUEST['total'],2);
 
-	$hash =  btsCreateEHASH($accountName,$order_id, $total, $asset, $hashSalt);
+	$hash =  btsCreateEHASH(accountName,$order_id, $total, $asset, hashSalt);
 
 	$memo = btsCreateMemo($hash);
 	$ret = array(
-		'accountName'     => $accountName,
+		'accountName'     => accountName,
 		'order_id'     => $order_id,
 		'memo'     => $memo
 	);
