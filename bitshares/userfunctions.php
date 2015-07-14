@@ -13,7 +13,7 @@ function getOrderCartHelper($id)
   // get all open orders
   if($id == NULL)
   {
-    $result = db_query("SELECT order_id, order_status, currency, order_total  FROM {uc_orders} WHERE order_status 
+    $result = db_query("SELECT order_id, order_status, currency, order_total, created  FROM {uc_orders} WHERE order_status 
     IN ('processing', 'pending', 'in_checkout') ");  
 
     return $result;
@@ -61,7 +61,8 @@ function getOrderWithStatusFromCartHelper($id, $response_code)
               $ret = array (
                 "order_id" => $order->order_id,
 	              "currency" =>	$order->currency,
-	              "order_total" =>	$order->order_total
+	              "order_total" =>	$order->order_total,
+                "date_added" =>	$order->created
 	            );
               array_push($orders, $ret);
             }
@@ -97,7 +98,8 @@ function getOrderWithStatusFromCartHelper($id, $response_code)
           $ret = array (
             "order_id" => $id,
 	          "currency" =>	$response->currency,
-	          "order_total" =>	$response->order_total
+	          "order_total" =>	$response->order_total,
+            "date_added" =>	$response->created
 	        );
           array_push($orders, $ret);
         }
@@ -153,9 +155,9 @@ function getOpenOrdersUser()
 		$total = $responseOrder['order_total'];
 		$total = number_format((float)$total,2);		
 		$newOrder['total'] = $total;
-		$newOrder['currency_code'] = $responseOrder['currency'];
+		$newOrder['asset'] = $responseOrder['currency'];
 		$newOrder['order_id'] = $responseOrder['order_id'];
-		$newOrder['date_added'] = 0;
+		$newOrder['date_added'] = $responseOrder['date_added'];
 		array_push($openOrderList,$newOrder);    
 	}
 	return $openOrderList;
@@ -195,6 +197,7 @@ function doesOrderExistUser($memo, $order_id)
 				$order['total'] = $total;
 				$order['asset'] = $asset;
 				$order['memo'] = $memo;	
+        $order['date_added'] = $responseOrder['date_added'];
 				return $order;
 			}
 	}
